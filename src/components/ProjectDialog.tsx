@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,13 @@ import { Label } from "@/components/ui/label";
 import { useTaskStore } from "@/store/taskStore";
 import { FolderPlus, Inbox, User, Briefcase, Hash, Star, Code, Palette } from "lucide-react";
 import { toast } from "sonner";
+import { Project } from "@/types/task";
+import { useAppStore } from "@/store/appStore";
 
-interface CreateProjectDialogProps {
+interface ProjectDialogProps {
   open: boolean;
   onClose: () => void;
+  projectToEdit?: Project | null;
 }
 
 const PROJECT_COLORS = [
@@ -36,13 +39,28 @@ const PROJECT_ICONS = [
   { id: "code", icon: Code },
 ];
 
-export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps) {
-  const { addProject } = useTaskStore();
+export function ProjectDialog({ open, onClose, projectToEdit }: ProjectDialogProps) {
+  const { addProject, updateProject } = useTaskStore();
+  const { editingProject, setEditingProject } = useAppStore();
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PROJECT_COLORS[0].value);
   const [selectedIcon, setSelectedIcon] = useState("hash");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const isEditMode = !!editingProject;
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isEditMode && editingProject) {
+      setName(editingProject.name);
+      setSelectedColor(editingProject.color);
+      setSelectedIcon(editingProject.icon);
+    } else {
+      resetForm();
+    }
+  }, [open, editingProject, isEditMode]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -50,20 +68,44 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
       return;
     }
 
-    addProject({
-      name: name.trim(),
-      color: selectedColor,
-      icon: selectedIcon,
-    });
+    setIsLoading(true);
 
-    toast.success("Project created successfully");
-    resetAndClose();
+    try {
+      if (isEditMode && editingProject) {
+        // Update existing project
+        updateProject(editingProject.id, {
+          name: name.trim(),
+          color: selectedColor,
+          icon: selectedIcon,
+        });
+        toast.success("Project updated successfully");
+        setEditingProject(null);
+      } else {
+        // Create new project
+        addProject({
+          name: name.trim(),
+          color: selectedColor,
+          icon: selectedIcon,
+        });
+        toast.success("Project created successfully");
+      }
+
+      resetAndClose();
+    } catch (error) {
+      toast.error(isEditMode ? "Failed to update project" : "Failed to create project");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const resetAndClose = () => {
+  const resetForm = () => {
     setName("");
     setSelectedColor(PROJECT_COLORS[0].value);
     setSelectedIcon("hash");
+  };
+
+  const resetAndClose = () => {
+    resetForm();
     onClose();
   };
 
@@ -72,37 +114,48 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <FolderPlus className="w-5 h-5 text-primary" />
-            New Project
+            {isEditMode ? (
+              <>
+                <Palette className="w-5 h-5 text-primary" />
+                Edit Project
+              </>
+            ) : (
+              <>
+                <FolderPlus className="w-5 h-5 text-primary" />
+                New Project
+              </>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           {/* Name Input */}
           <div className="space-y-2">
-            <Label htmlFor="projectName">Name</Label>
+            <Label htmlFor="projectName">Project Name</Label>
             <Input
               id="projectName"
-              placeholder="e.g. Side Project"
+              placeholder="e.g. Side Project, Work Tasks"
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
+              disabled={isLoading}
               className="h-10"
             />
           </div>
 
           {/* Icon Selection */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label>Icon</Label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {PROJECT_ICONS.map(({ id, icon: Icon }) => (
                 <Button
                   key={id}
                   type="button"
                   variant={selectedIcon === id ? "default" : "outline"}
                   size="icon"
-                  className="w-10 h-10"
+                  className="w-10 h-10 transition-all"
                   onClick={() => setSelectedIcon(id)}
+                  disabled={isLoading}
                 >
                   <Icon className="w-5 h-5" />
                 </Button>
@@ -111,7 +164,7 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
           </div>
 
           {/* Color Selection */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label>Color</Label>
             <div className="flex flex-wrap gap-3">
               {PROJECT_COLORS.map((color) => (
@@ -119,10 +172,12 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
                   key={color.value}
                   type="button"
                   onClick={() => setSelectedColor(color.value)}
-                  className="relative flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
+                  disabled={isLoading}
+                  className="relative flex items-center justify-center transition-transform hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={color.name}
                 >
                   <div
-                    className="w-8 h-8 rounded-full border border-black/5"
+                    className="w-8 h-8 rounded-full border border-black/5 transition-all"
                     style={{ backgroundColor: color.value }}
                   />
                   {selectedColor === color.value && (
@@ -133,11 +188,22 @@ export function CreateProjectDialog({ open, onClose }: CreateProjectDialogProps)
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={resetAndClose}>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" onClick={resetAndClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit">Create Project</Button>
+            <Button type="submit" disabled={isLoading} className="gap-2">
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  {isEditMode ? "Updating..." : "Creating..."}
+                </>
+              ) : isEditMode ? (
+                "Save Changes"
+              ) : (
+                "Create Project"
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

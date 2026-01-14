@@ -1,3 +1,5 @@
+import { Project } from "@/types/task";
+import { s } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -23,7 +25,8 @@ interface AppState {
   sidebarCollapsed: boolean;
   viewMode: ViewMode;
   settingsOpen: boolean;
-  projectCreateOpen: boolean;
+  showProjectDialog: boolean;
+  editingProject: Project | null;
   pomodoroSettings: PomodoroSettings;
   pomodoro: PomodoroState;
 
@@ -35,7 +38,8 @@ interface AppState {
   toggleSidebar: () => void;
   setViewMode: (mode: ViewMode) => void;
   setSettingsOpen: (open: boolean) => void;
-  setProjectCreateOpen: (open: boolean) => void;
+  setShowProjectDialog: (open: boolean) => void;
+  setEditingProject: (project: Project | null) => void;
   updatePomodoroSettings: (settings: Partial<PomodoroSettings>) => void;
 
   // Pomodoro actions
@@ -63,7 +67,8 @@ export const useAppStore = create<AppState>()(
       sidebarCollapsed: false,
       viewMode: "list",
       settingsOpen: false,
-      projectCreateOpen: false,
+      showProjectDialog: false,
+      editingProject: null,
       pomodoroSettings: {
         workDuration: 25,
         breakDuration: 5,
@@ -91,8 +96,12 @@ export const useAppStore = create<AppState>()(
         set({ settingsOpen: open });
       },
 
-      setProjectCreateOpen: (open) => {
-        set({ projectCreateOpen: open });
+      setShowProjectDialog: (open) => {
+        set({ showProjectDialog: open });
+      },
+
+      setEditingProject: (project) => {
+        set({ editingProject: project });
       },
 
       updatePomodoroSettings: (settings) => {

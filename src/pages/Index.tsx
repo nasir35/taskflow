@@ -8,7 +8,8 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
 import { useAppStore } from "@/store/appStore";
 import { Task } from "@/types/task";
-import { CreateProjectDialog } from "@/components/CreateProjectDialog";
+import { ProjectDialog } from "@/components/ProjectDialog";
+import { s } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
 
 const Index = () => {
   const {
@@ -16,8 +17,8 @@ const Index = () => {
     viewMode,
     settingsOpen,
     setSettingsOpen,
-    projectCreateOpen,
-    setProjectCreateOpen,
+    showProjectDialog,
+    setShowProjectDialog,
   } = useAppStore();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -80,8 +81,12 @@ const Index = () => {
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* Create Project Dialog */}
-      {projectCreateOpen && (
-        <CreateProjectDialog open={projectCreateOpen} onClose={() => setProjectCreateOpen(false)} />
+      {showProjectDialog && (
+        <ProjectDialog
+          open={showProjectDialog}
+          onClose={() => setShowProjectDialog(false)}
+          projectToEdit={null}
+        />
       )}
 
       {/* Edit Dialog from Calendar */}

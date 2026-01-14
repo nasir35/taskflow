@@ -1,5 +1,5 @@
-export type Priority = 'low' | 'medium' | 'high';
-export type Status = 'todo' | 'in-progress' | 'completed';
+export type Priority = "low" | "medium" | "high";
+export type Status = "todo" | "in-progress" | "completed";
 
 export interface Subtask {
   id: string;
@@ -11,6 +11,7 @@ export interface Task {
   id: string;
   title: string;
   description: string;
+  imageUrl?: string;
   priority: Priority;
   status: Status;
   dueDate: string | null;
@@ -30,4 +31,4 @@ export interface Project {
   createdAt: string;
 }
 
-export type FilterType = 'all' | 'today' | 'upcoming' | 'completed';
+export type FilterType = "all" | "today" | "upcoming" | "completed";

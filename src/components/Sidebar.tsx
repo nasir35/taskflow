@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ProjectListItem from "./ProjectMap";
 
 const filterItems: { id: FilterType; label: string; icon: React.ReactNode }[] = [
   { id: "all", label: "All Tasks", icon: <Inbox className="w-4 h-4" /> },
@@ -42,8 +43,16 @@ const projectIcons: Record<string, React.ReactNode> = {
 };
 
 export function Sidebar() {
-  const { activeFilter, activeProjectId, setActiveFilter, setActiveProjectId, projects, tasks } =
-    useTaskStore();
+  const {
+    activeFilter,
+    activeProjectId,
+    setActiveFilter,
+    setActiveProjectId,
+    projects,
+    tasks,
+    updateProject,
+    deleteProject,
+  } = useTaskStore();
 
   const {
     theme,
@@ -53,7 +62,10 @@ export function Sidebar() {
     viewMode,
     setViewMode,
     setSettingsOpen,
-    setProjectCreateOpen,
+    showProjectDialog,
+    setShowProjectDialog,
+    editingProject,
+    setEditingProject,
   } = useAppStore();
 
   const getTaskCount = (projectId: string) => {
@@ -63,6 +75,13 @@ export function Sidebar() {
   const getTodayCount = () => {
     const today = new Date().toISOString().split("T")[0];
     return tasks.filter((t) => t.dueDate === today && t.status !== "completed").length;
+  };
+  const getUpcomingCount = () => {
+    const today = new Date().toISOString().split("T")[0];
+    return tasks.filter((t) => t.dueDate > today && t.status !== "completed").length;
+  };
+  const getCompletedCount = () => {
+    return tasks.filter((t) => t.status === "completed").length;
   };
 
   return (
@@ -147,6 +166,16 @@ export function Sidebar() {
                       {getTodayCount()}
                     </span>
                   )}
+                  {item.id === "upcoming" && getUpcomingCount() > 0 && (
+                    <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">
+                      {getUpcomingCount()}
+                    </span>
+                  )}
+                  {item.id === "completed" && getCompletedCount() > 0 && (
+                    <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">
+                      {getCompletedCount()}
+                    </span>
+                  )}
                 </>
               )}
             </button>
@@ -163,7 +192,10 @@ export function Sidebar() {
             </span>
             <button
               className="text-muted-foreground hover:text-foreground"
-              onClick={() => setProjectCreateOpen(true)}
+              onClick={() => {
+                setEditingProject(null);
+                setShowProjectDialog(true);
+              }}
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -171,29 +203,26 @@ export function Sidebar() {
         )}
         <div className="space-y-1">
           {projects.map((project) => (
-            <button
+            <ProjectListItem
               key={project.id}
-              onClick={() => setActiveProjectId(project.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-                activeProjectId === project.id
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              )}
-            >
-              <div
-                className="w-4 h-4 rounded flex items-center justify-center"
-                style={{ backgroundColor: project.color + "20", color: project.color }}
-              >
-                {projectIcons[project.icon] || <FolderKanban className="w-3 h-3" />}
-              </div>
-              {!sidebarCollapsed && (
-                <>
-                  <span className="flex-1 text-left truncate">{project.name}</span>
-                  <span className="text-xs text-muted-foreground">{getTaskCount(project.id)}</span>
-                </>
-              )}
-            </button>
+              project={project}
+              isActive={activeProjectId === project.id}
+              taskCount={getTaskCount(project.id)}
+              isCollapsed={sidebarCollapsed}
+              projectIcons={projectIcons}
+              onSelect={(projectId) => setActiveProjectId(projectId)}
+              onEdit={(project) => {
+                console.log("project from onEdit:", project);
+                setEditingProject(project);
+                setShowProjectDialog(true);
+              }}
+              onDelete={(projectId) => {
+                // Handle delete
+                if (confirm("Delete this project?")) {
+                  deleteProject(projectId);
+                }
+              }}
+            />
           ))}
         </div>
       </div>
