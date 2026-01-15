@@ -83,6 +83,9 @@ export function Sidebar() {
   const getCompletedCount = () => {
     return tasks.filter((t) => t.status === "completed").length;
   };
+  const getAllCount = () => {
+    return tasks.filter((t) => t.status !== "completed").length;
+  };
 
   return (
     <aside
@@ -174,6 +177,11 @@ export function Sidebar() {
                   {item.id === "completed" && getCompletedCount() > 0 && (
                     <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">
                       {getCompletedCount()}
+                    </span>
+                  )}
+                  {item.id === "all" && getAllCount() > 0 && (
+                    <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">
+                      {getAllCount()}
                     </span>
                   )}
                 </>
